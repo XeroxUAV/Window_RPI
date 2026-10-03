@@ -15,7 +15,7 @@ from pymavlink import mavutil
 
 SERIAL_PORT = '/dev/ttyAMA4'
 BAUD_RATE = 115200
-UDP_IP = '10.178.125.248'
+UDP_IP = '0.0.0.0'
 UDP_PORT = 14550
 
 # ============================================================
