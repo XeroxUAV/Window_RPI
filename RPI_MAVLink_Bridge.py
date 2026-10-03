@@ -26,13 +26,18 @@ addr_lock = threading.Lock()
 
 def serial_to_udp(serial, udp_sock):
     while True:
-        n = serial.port.in_waiting or 512
-        data = serial.port.read(n)
-        if data:
-            with addr_lock:
-                addr = client_addr
-            if addr is not None:
-                udp_sock.sendto(data, addr)
+        # blocking=True makes this wait for a real MAVLink message
+        msg = serial.recv_match(blocking=True, timeout=1.0)
+        if msg is None:
+            continue
+        # Re-serialize the message back to raw MAVLink bytes
+        data = msg.get_msgbuf()
+        if not data:
+            continue
+        with addr_lock:
+            addr = client_addr
+        if addr is not None:
+            udp_sock.sendto(bytes(data), addr)
 
 
 def udp_to_serial(udp_sock, serial):
@@ -47,14 +52,19 @@ def udp_to_serial(udp_sock, serial):
                     print(f"Computer connected from {addr[0]}:{addr[1]}")
                 else:
                     print(f"Telemetry now going to {addr[0]}:{addr[1]}")
-        serial.write(data)
+        serial.port.write(data)
 
 
 def main():
     print(f"Connecting to flight controller on {SERIAL_PORT} at {BAUD_RATE} baud...")
     serial = mavutil.mavlink_connection(SERIAL_PORT, baud=BAUD_RATE)
-    serial.wait_heartbeat()
-    print(f"Flight controller connected (system {serial.target_system}).")
+    print("Waiting for FC heartbeat...")
+    hb = serial.wait_heartbeat(timeout=15)
+    if hb is None:
+        print("ERROR: no heartbeat from FC on UART4. Check wiring/power/baud.")
+        print("Bridge will still start — you may reconnect the FC later.")
+    else:
+        print(f"FC connected (system {serial.target_system}).")
 
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_sock.bind((UDP_IP, UDP_PORT))
