@@ -62,7 +62,7 @@ def connect(connection_string="udp:0.0.0.0:14552",
         source_system=source_system,
         source_component=source_component,
     )
-    _master.wait_heartbeat()
+    _master.wait_heartbeat(timeout=5)
     return _master
 
 
