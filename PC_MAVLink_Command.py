@@ -68,11 +68,11 @@ def main():
 
     print("\n[1] Arming ...")
     xeroxuav.send_arm()
-    pump(3.0)
+    pump(10.0)
 
     print("\n[2] Velocity commands (only effective while armed + airborne):")
-    # xeroxuav.send_velocity(0.0, 0.0, 0.0)      # hold position
-    # time.sleep(1.0)
+    xeroxuav.send_velocity(0.0, 0.0, 0.0)      # hold position
+    time.sleep(1.0)
     # xeroxuav.send_velocity(0.2, 0.0, 0.0)      # 0.2 m/s to the right, 2 s
     # time.sleep(2.0)
     # xeroxuav.send_velocity(0.0, 0.3, 0.0)      # 0.3 m/s forward, 2 s
