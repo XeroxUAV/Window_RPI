@@ -64,7 +64,26 @@ def main():
         print("  4. Is a firewall dropping UDP between these two hosts?")
         return
 
-    print(f"Connected! System {master.target_system}, mode {master.flightmode}")
+    # wait_heartbeat() accepts *any* heartbeat, including an echo of our own
+    # announce packet. Only a real vehicle heartbeat makes pymavlink adopt a
+    # target sysid — otherwise target_system stays 0 and every command below
+    # would be addressed to nobody while still looking like it worked.
+    is_vehicle, description = xeroxuav.classify_heartbeat(hb)
+    if not is_vehicle:
+        print(f"\nGot a heartbeat, but not from a flight controller:\n"
+              f"        {description}")
+        print("\nRefusing to send commands. Aborting.")
+        print("\nMost likely the Pi's UART4 is looping our packets back "
+              "(TX shorted to RX) because no flight controller is "
+              "connected. On the Pi, the bridge should be printing:")
+        print("    ERROR: no heartbeat from FC on UART4. "
+              "Check wiring/power/baud.")
+        print("\nIf that error is NOT showing, then something else on the "
+              "network is answering on UDP 14550 — check for a second "
+              "bridge or a stray telemetry link.")
+        return
+
+    print(f"Connected! {description}, mode {master.flightmode}")
 
     print("\n[1] Arming ...")
     xeroxuav.send_arm()

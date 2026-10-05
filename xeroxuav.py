@@ -93,8 +93,12 @@ def send_heartbeat():
     packet it receives and discards everything until then. So if we wait
     for telemetry before speaking, the bridge has nowhere to send it and
     the link deadlocks.
+
+    Note this deliberately does not use _require_peer(): announcing is what
+    *establishes* the peer, so it has to work before one exists.
     """
-    _require_peer()
+    if _master is None:
+        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
     _master.mav.heartbeat_send(
         mavutil.mavlink.MAV_TYPE_GCS,
         mavutil.mavlink.MAV_AUTOPILOT_INVALID,
