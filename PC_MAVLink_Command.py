@@ -52,6 +52,15 @@ def main():
     xeroxuav.announce(duration=ANNOUNCE_TIME)
 
     print("Waiting for heartbeat ...")
+    print(f"Connected! System {master.target_system}, mode {master.flightmode}")
+
+    print("\n[0] Setting GUIDED mode ...")
+    xeroxuav.set_mode("GUIDED")
+    pump(2.0)
+
+    print("\n[1] Arming ...")
+    xeroxuav.send_arm()
+    pump(10.0)
     hb = master.wait_heartbeat(timeout=HEARTBEAT_TIMEOUT)
     if hb is None:
         print(f"\nNo heartbeat received within {HEARTBEAT_TIMEOUT}s. Aborting.")
