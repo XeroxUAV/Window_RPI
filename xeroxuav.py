@@ -291,3 +291,20 @@ def send_arm():
         1, 0, 0, 0, 0, 0, 0,
     )
     _pending[mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM] = "Arm"
+def send_disarm():
+    """
+    Disarm the vehicle.
+
+    Note: the physical RC arm switch must be in the DISARM position,
+    otherwise the flight controller will reject the command.
+    """
+    if _master is None:
+        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _master.mav.command_long_send(
+        _master.target_system,
+        _master.target_component,
+        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+        0,
+        0, 0, 0, 0, 0, 0, 0,
+    )
+    _pending[mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM] = "Disarm"
