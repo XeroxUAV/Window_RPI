@@ -15,7 +15,7 @@ import xeroxuav
 # CONFIGURATION
 # ============================================================
 
-RPI_IP = '10.178.125.230'   # <-- change to your Pi's IP address
+RPI_IP = '10.178.125.248'   # <-- change to your Pi's IP address
 UDP_PORT = 14550
 HEARTBEAT_TIMEOUT = 10      # options: higher with camera stream running
 ANNOUNCE_TIME = 2.0         # how long to keep announcing before waiting
