@@ -3,6 +3,8 @@ xeroxuav.py — MAVLink control library for the XeroxUAV drone.
 
 Functions:
     connect()          - open a MAVLink connection
+    announce()         - send GCS heartbeats so the RPi bridge finds us
+    send_heartbeat()   - send a single GCS heartbeat
     send_velocity()    - send a velocity + yaw-rate command (GUIDED mode)
     ekf_source()       - switch the active EKF source set
     send_land()        - command the vehicle to land
@@ -10,6 +12,8 @@ Functions:
     send_arm()         - arm the vehicle
     process_messages() - drain and handle incoming MAVLink messages
 """
+
+import time
 
 from pymavlink import mavutil
 
@@ -43,18 +47,27 @@ _pending = {}
 
 def connect(connection_string="udp:0.0.0.0:14552",
             source_system=255,
-            source_component=190):
+            source_component=190,
+            wait=True,
+            timeout=5.0):
     """
-    Open a MAVLink connection and wait for the first heartbeat.
+    Open a MAVLink connection and (optionally) wait for the first heartbeat.
 
     Parameters
     ----------
     connection_string : str
-        e.g. "udp:0.0.0.0:14552" or "/dev/ttyAMA4"
+        e.g. "udpout:10.0.0.5:14550" or "/dev/ttyAMA4"
     source_system : int
         MAVLink system ID for this GCS (default 255)
     source_component : int
         MAVLink component ID for this GCS (default 190)
+    wait : bool
+        If True, block for up to `timeout` seconds waiting for a heartbeat.
+        Pass wait=False to control the handshake yourself (e.g. call
+        announce() first) — otherwise you silently wait twice and the
+        caller's own timeout stops reflecting reality.
+    timeout : float
+        Seconds to wait for the first heartbeat when `wait` is True.
     """
     global _master
     _master = mavutil.mavlink_connection(
@@ -62,8 +75,48 @@ def connect(connection_string="udp:0.0.0.0:14552",
         source_system=source_system,
         source_component=source_component,
     )
-    _master.wait_heartbeat(timeout=5)
+    if wait:
+        _master.wait_heartbeat(timeout=timeout)
     return _master
+
+
+# ============================================================
+# Handshake
+# ============================================================
+
+def send_heartbeat():
+    """
+    Send a single GCS heartbeat.
+
+    This is what makes the RPi bridge aware of us. The bridge is
+    reactive-only: it learns the computer's source address from the first
+    packet it receives and discards everything until then. So if we wait
+    for telemetry before speaking, the bridge has nowhere to send it and
+    the link deadlocks.
+    """
+    if _master is None:
+        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _master.mav.heartbeat_send(
+        mavutil.mavlink.MAV_TYPE_GCS,
+        mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+        0, 0, 0,
+    )
+
+
+def announce(duration=2.0, interval=0.2):
+    """
+    Send GCS heartbeats for `duration` seconds so the bridge learns our
+    address. Call this immediately after connect() with wait=False.
+
+    Several are sent (rather than one) so a single dropped packet on a
+    busy WiFi link cannot leave us stuck waiting again.
+    """
+    end = time.time() + duration
+    while True:
+        send_heartbeat()
+        if time.time() + interval >= end:
+            return
+        time.sleep(interval)
 
 
 # ============================================================

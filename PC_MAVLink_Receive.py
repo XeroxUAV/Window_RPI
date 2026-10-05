@@ -11,7 +11,7 @@ import time
 # CONFIGURATION
 # ============================================================
 
-RPI_IP = '10.162.37.248'   # <-- change to your Pi's IP address
+RPI_IP = '10.178.125.230'   # <-- change to your Pi's IP address
 UDP_PORT = 14550
 
 # ============================================================

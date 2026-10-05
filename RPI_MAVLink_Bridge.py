@@ -22,9 +22,11 @@ UDP_PORT = 14550
 
 client_addr = None
 addr_lock = threading.Lock()
+warned_no_client = False
 
 
 def serial_to_udp(serial, udp_sock):
+    global warned_no_client
     while True:
         # blocking=True makes this wait for a real MAVLink message
         msg = serial.recv_match(blocking=True, timeout=1.0)
@@ -36,18 +38,27 @@ def serial_to_udp(serial, udp_sock):
             continue
         with addr_lock:
             addr = client_addr
-        if addr is not None:
-            udp_sock.sendto(bytes(data), addr)
+        if addr is None:
+            # We are "connected" but nobody knows our address yet. Say so,
+            # otherwise the PC just times out waiting for a heartbeat that
+            # we had no way of sending.
+            if not warned_no_client:
+                warned_no_client = True
+                print("No computer on the network yet — dropping telemetry. "
+                      "Run the PC script; it announces itself with a heartbeat.")
+            continue
+        udp_sock.sendto(bytes(data), addr)
 
 
 def udp_to_serial(udp_sock, serial):
-    global client_addr
+    global client_addr, warned_no_client
     while True:
         data, addr = udp_sock.recvfrom(4096)
         with addr_lock:
             if client_addr != addr:
                 old = client_addr
                 client_addr = addr
+                warned_no_client = False   # re-arm the warning if they leave
                 if old is None:
                     print(f"Computer connected from {addr[0]}:{addr[1]}")
                 else:
