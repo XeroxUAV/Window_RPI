@@ -291,6 +291,7 @@ def send_arm():
         1, 0, 0, 0, 0, 0, 0,
     )
     _pending[mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM] = "Arm"
+    
 def send_disarm():
     """
     Disarm the vehicle.
