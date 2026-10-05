@@ -309,3 +309,13 @@ def send_disarm():
         0, 0, 0, 0, 0, 0, 0,
     )
     _pending[mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM] = "Disarm"
+    
+def set_mode(mode_name):
+    """Set the flight mode by name, e.g. 'GUIDED'."""
+    if _master is None:
+        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    mode_id = _master.mode_mapping().get(mode_name)
+    if mode_id is None:
+        raise ValueError(f"Unknown mode '{mode_name}'. "
+                         f"Available: {list(_master.mode_mapping())}")
+    _master.set_mode(mode_id)
