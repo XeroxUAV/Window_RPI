@@ -94,8 +94,7 @@ def send_heartbeat():
     for telemetry before speaking, the bridge has nowhere to send it and
     the link deadlocks.
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     _master.mav.heartbeat_send(
         mavutil.mavlink.MAV_TYPE_GCS,
         mavutil.mavlink.MAV_AUTOPILOT_INVALID,
@@ -119,6 +118,39 @@ def announce(duration=2.0, interval=0.2):
         time.sleep(interval)
 
 
+def classify_heartbeat(hb):
+    """
+    Decide whether a heartbeat really came from a flight controller.
+
+    pymavlink's wait_heartbeat() is just recv_match(type='HEARTBEAT'), so it
+    returns *any* heartbeat — including a GCS heartbeat, or an echo of the
+    packet we just announced with. Only a heartbeat that passes pymavlink's
+    probably_vehicle_heartbeat() makes it adopt a target sysid; until then
+    target_system stays 0 and flightmode stays "UNKNOWN".
+
+    Returns (is_vehicle, description) so callers can print the reason.
+    Mirrors pymavlink's own probably_vehicle_heartbeat() rules.
+    """
+    mav = mavutil.mavlink
+    src_sys = hb.get_srcSystem()
+    src_comp = hb.get_srcComponent()
+    where = (f"sysid {src_sys}, component {src_comp}, "
+             f"type {hb.type}, autopilot {hb.autopilot}")
+
+    if src_sys == _master.source_system and src_comp == _master.source_component:
+        return False, (f"{where}\n"
+                       f"        ^ this is our OWN announce packet coming back. "
+                       f"Nothing is forwarding real telemetry.")
+    if src_comp == mav.MAV_COMP_ID_GIMBAL:
+        return False, f"{where}\n        ^ a gimbal, not a flight controller."
+    if hb.type in (mav.MAV_TYPE_GCS, mav.MAV_TYPE_GIMBAL,
+                   mav.MAV_TYPE_ADSB, mav.MAV_TYPE_ONBOARD_CONTROLLER):
+        return False, f"{where}\n        ^ not a vehicle type."
+    if hb.autopilot == mav.MAV_AUTOPILOT_INVALID:
+        return False, f"{where}\n        ^ autopilot reports MAV_AUTOPILOT_INVALID."
+    return True, where
+
+
 # ============================================================
 # Helpers
 # ============================================================
@@ -126,6 +158,27 @@ def announce(duration=2.0, interval=0.2):
 def _clamp(value, limit=MAX_VELOCITY):
     """Clamp a value to the range [-limit, +limit]."""
     return max(-limit, min(limit, value))
+
+
+def _require_peer():
+    """
+    Guard for every command sender.
+
+    Catches two distinct failures:
+      * not connected at all
+      * connected, but no flight controller has been identified. pymavlink
+        only adopts a target sysid from a *vehicle* heartbeat, so
+        target_system stays 0 and every command would be addressed to
+        sysid 0, which nobody answers. Raising beats silently sending
+        commands into a socket that only echoes our own packets back.
+    """
+    if _master is None:
+        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    if _master.target_system == 0:
+        raise RuntimeError(
+            "No flight controller identified (target system is 0). "
+            "Wait for a vehicle heartbeat before sending commands."
+        )
 
 
 def process_messages():
@@ -184,8 +237,7 @@ def send_velocity(right, forward, up, yaw_rate=0.0):
     * The achievable yaw rate is also limited by the flight
       controller's PILOT_Y_RATE parameter (default 200 deg/s).
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
 
     # Convert user inputs (right / forward / up) to ArduPilot NED
     vy = _clamp(right)
@@ -222,8 +274,7 @@ def ekf_source(source_set):
     in the flight controller via the EK3_SRC1_*, EK3_SRC2_*,
     and EK3_SRC3_* parameters.
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     if source_set not in (1, 2, 3):
         raise ValueError(f"source_set must be 1, 2 or 3 (got {source_set})")
 
@@ -240,8 +291,7 @@ def ekf_source(source_set):
 
 def send_land():
     """Command the vehicle to land at its current position."""
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     _master.mav.command_long_send(
         _master.target_system,
         _master.target_component,
@@ -261,8 +311,7 @@ def send_takeoff(altitude):
     altitude : float
         Target altitude in metres, relative to home.
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     _master.mav.command_long_send(
         _master.target_system,
         _master.target_component,
@@ -281,8 +330,7 @@ def send_arm():
     Note: the physical RC arm switch must be in the ARM position,
     otherwise the flight controller will reject the command.
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     _master.mav.command_long_send(
         _master.target_system,
         _master.target_component,
@@ -299,8 +347,7 @@ def send_disarm():
     Note: the physical RC arm switch must be in the DISARM position,
     otherwise the flight controller will reject the command.
     """
-    if _master is None:
-        raise RuntimeError("Not connected. Call xeroxuav.connect() first.")
+    _require_peer()
     _master.mav.command_long_send(
         _master.target_system,
         _master.target_component,
