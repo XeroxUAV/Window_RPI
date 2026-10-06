@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import time
 
-PI_IP = "10.178.125.248"
+PI_IP = "10.178.125.230"
 PORT = 8765
 
 received = queue.Queue(maxsize=1)
