@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 PI_IP = "10.178.125.230"
-PORT = 8765
+PORT = 8080
 
 received = queue.Queue(maxsize=1)
 stop_event = threading.Event()

@@ -15,7 +15,7 @@ import xeroxuav
 # CONFIGURATION
 # ============================================================
 
-RPI_IP = '10.178.125.248'   # <-- change to your Pi's IP address
+RPI_IP = '10.102.179.248'   # <-- change to your Pi's IP address
 UDP_PORT = 14550
 HEARTBEAT_TIMEOUT = 10      # options: higher with camera stream running
 ANNOUNCE_TIME = 2.0         # how long to keep announcing before waiting
@@ -83,9 +83,9 @@ def main():
     # time.sleep(2.0)
     # xeroxuav.send_velocity(0.0, 0.0, 0.0)      # stop
     # pump(1.0)
-
-    print("\n[3] Disarming ...")
-    xeroxuav.send_disarm()
+    xeroxuav.send_takeoff()
+    # print("\n[3] Disarming ...")
+    # xeroxuav.send_disarm()
     pump(3.0)
 
     print("\nDone. Command round-trip test complete.")
