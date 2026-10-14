@@ -84,8 +84,11 @@ def main():
     # xeroxuav.send_velocity(0.0, 0.0, 0.0)      # stop
     # pump(1.0)
     xeroxuav.send_takeoff(0.5)
-    # print("\n[3] Disarming ...")
-    # xeroxuav.send_disarm()
+    time.sleep(2)
+    xeroxuav.send_velocity(0,0,0,0)
+    time.sleep(3)
+    print("\n[3] Disarming ...")
+    xeroxuav.send_disarm()
     pump(3.0)
 
     print("\nDone. Command round-trip test complete.")
